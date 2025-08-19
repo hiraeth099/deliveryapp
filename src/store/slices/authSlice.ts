@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { AuthState, User, ApiResponse } from '../../types';
 import { secureStorage } from '../../storage/secureStorage';
 import { authAPI } from '../../utils/api';
+import { rejectedOrdersStorage } from '../../utils/rejectedOrdersStorage';
 
 const initialState: AuthState = {
   user: null,
@@ -71,6 +72,9 @@ export const refreshAuthToken = createAsyncThunk(
 export const loadStoredAuth = createAsyncThunk(
   'auth/loadStored',
   async () => {
+    // Cleanup old rejected orders on app start
+    await rejectedOrdersStorage.cleanupOldRejectedOrders();
+    
     const [token, refreshToken, userData] = await Promise.all([
       secureStorage.getAuthToken(),
       secureStorage.getRefreshToken(),

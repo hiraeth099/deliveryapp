@@ -15,6 +15,7 @@ import { getOrders, GetOrderByUser, updateOrderStatusAPI, updatestatusId } from 
 import { Order, ORDER_STATUSES } from '../../types';
 import { ArrowLeft, Phone, MapPin, Clock, Package, User, Navigation, X } from 'lucide-react-native';
 import { orderUpdateEmitter } from '@/src/utils/OrderUpdateEmitter';
+import { rejectedOrdersStorage } from '../../utils/rejectedOrdersStorage';
 
 type Props = StackScreenProps<OrdersStackParamList, 'OrderDetails'> & {
   onOrderStatusUpdate?: () => void;
@@ -178,7 +179,13 @@ const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress: async () => {
             setLoading(true);
             try {
-              await dispatch(rejectOrder({ orderId: id, reason: 'Driver rejected' })).unwrap();
+              // Store the rejected order ID in local storage
+              await rejectedOrdersStorage.addRejectedOrder(id);
+              
+              // Optionally call the API to reject the order
+              // await dispatch(rejectOrder({ orderId: id, reason: 'Driver rejected' })).unwrap();
+              
+              Alert.alert('Success', 'Order rejected successfully');
               navigation.goBack();
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to reject order');
@@ -378,7 +385,17 @@ const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             subtitle={order.restaurantAddress}
             leftIcon={<Package color={theme.colors.accent} size={24} />}
             rightIcon={<Navigation color={theme.colors.onSurfaceVariant} size={20} />}
-            onPress={() => handleNavigate('pickup')}
+            onPress={() => {
+              navigation.navigate('Navigation', {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                type: 'pickup',
+                pickupLocation: order.pickupLocation,
+                dropLocation: order.dropLocation,
+                restaurantName: order.restaurantName,
+                customerName: order.customerName,
+              });
+            }}
           />
         </Card>
 
@@ -392,7 +409,17 @@ const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             subtitle={order.deliveryAddress}
             leftIcon={<MapPin color={theme.colors.success} size={24} />}
             rightIcon={<Navigation color={theme.colors.onSurfaceVariant} size={20} />}
-            onPress={() => handleNavigate('drop')}
+            onPress={() => {
+              navigation.navigate('Navigation', {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                type: 'drop',
+                pickupLocation: order.pickupLocation,
+                dropLocation: order.dropLocation,
+                restaurantName: order.restaurantName,
+                customerName: order.customerName,
+              });
+            }}
           />
         </Card>
 
@@ -403,7 +430,17 @@ const OrderDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
               title="Calculate Route"
               subtitle="View route from your location to restaurant and customer"
               leftIcon={<Navigation color={theme.colors.primary} size={24} />}
-              onPress={() => {}}
+              onPress={() => {
+                navigation.navigate('Navigation', {
+                  orderId: order.id,
+                  orderNumber: order.orderNumber,
+                  type: 'route',
+                  pickupLocation: order.pickupLocation,
+                  dropLocation: order.dropLocation,
+                  restaurantName: order.restaurantName,
+                  customerName: order.customerName,
+                });
+              }}
             />
           </Card>
         )}

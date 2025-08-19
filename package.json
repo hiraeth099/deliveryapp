@@ -11,7 +11,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@lucide/lab": "^0.1.2",
-    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native": "^7.1.6",
     "@react-navigation/stack": "^7.4.4",
@@ -41,6 +41,7 @@
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-maps": "^1.25.3",
     "react-native-modal": "^14.0.0-rc.1",
     "react-native-phone-number-input": "^2.1.0",
     "react-native-reanimated": "~3.17.4",

@@ -13,6 +13,7 @@ import { Order } from '../../types';
 import { secureStorage } from '../../storage/secureStorage';
 import { Package, Filter, Calendar, MapPin } from 'lucide-react-native';
 import { orderUpdateEmitter } from '@/src/utils/OrderUpdateEmitter';
+import { rejectedOrdersStorage } from '../../utils/rejectedOrdersStorage';
 
 type Props = StackScreenProps<OrdersStackParamList, 'OrdersList'>;
 
@@ -28,6 +29,7 @@ const OrdersListScreen: React.FC<Props> = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [refreshing, setRefreshing] = useState(false);
   const [networkError, setNetworkError] = useState(false);
+  const [rejectedOrderIds, setRejectedOrderIds] = useState<string[]>([]);
 
   useEffect(() => {
   const reload = async () => {
@@ -57,6 +59,12 @@ const OrdersListScreen: React.FC<Props> = ({ navigation }) => {
           myIdParsed: myId ? parseInt(myId, 10) : 'null',
           hasValidMyId: myId && !isNaN(parseInt(myId, 10))
         });
+        
+        // Load rejected order IDs and cleanup old ones
+        await rejectedOrdersStorage.cleanupOldRejectedOrders();
+        const rejectedIds = await rejectedOrdersStorage.getRejectedOrderIds();
+        setRejectedOrderIds(rejectedIds);
+        console.log('🚫 OrdersListScreen - Rejected order IDs loaded:', rejectedIds);
       } catch (error) {
         console.error('🚨 OrdersListScreen - Error reading secure storage:', error);
       }
@@ -107,24 +115,30 @@ const OrdersListScreen: React.FC<Props> = ({ navigation }) => {
       // Filter orders into current and past using existing filterOrders logic
       console.log('🔍 OrdersListScreen - Filtering orders');
       const { currentOrders, pastOrders } = filterOrders(allOrders);
+      
+      // Filter out rejected orders
+      const filteredCurrentOrders = currentOrders.filter(order => !rejectedOrderIds.includes(order.id));
+      const filteredPastOrders = pastOrders.filter(order => !rejectedOrderIds.includes(order.id));
+      
       console.log('📊 OrdersListScreen - Filter results:', {
         totalInput: allOrders.length,
-        currentOrdersCount: currentOrders.length,
-        pastOrdersCount: pastOrders.length,
-        currentOrderIds: currentOrders.map(order => order.id),
-        pastOrderIds: pastOrders.map(order => order.id)
+        currentOrdersCount: filteredCurrentOrders.length,
+        pastOrdersCount: filteredPastOrders.length,
+        rejectedOrdersFiltered: currentOrders.length - filteredCurrentOrders.length + pastOrders.length - filteredPastOrders.length,
+        currentOrderIds: filteredCurrentOrders.map(order => order.id),
+        pastOrderIds: filteredPastOrders.map(order => order.id)
       });
       
       // Set the filtered orders
       console.log('💾 OrdersListScreen - Setting state with filtered orders');
-      setActiveOrders(currentOrders);
-      setOrderHistory(pastOrders);
+      setActiveOrders(filteredCurrentOrders);
+      setOrderHistory(filteredPastOrders);
       // Reset network error state on successful load
       setNetworkError(false);
       
       console.log('✅ OrdersListScreen - State updated successfully:', {
-        activeOrdersLength: currentOrders.length,
-        orderHistoryLength: pastOrders.length
+        activeOrdersLength: filteredCurrentOrders.length,
+        orderHistoryLength: filteredPastOrders.length
       });
       
     } catch (error) {
@@ -152,6 +166,12 @@ const OrdersListScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    
+    // Reload rejected order IDs
+    await rejectedOrdersStorage.cleanupOldRejectedOrders();
+    const rejectedIds = await rejectedOrdersStorage.getRejectedOrderIds();
+    setRejectedOrderIds(rejectedIds);
+    
     await loadOrders(false); // Manual refresh doesn't need loading state
     setRefreshing(false);
   };
